@@ -1,7 +1,6 @@
 BEGIN;
 
-TRUNCATE TABLE products;
-TRUNCATE TABLE categories;
+TRUNCATE TABLE products, categories;
 
 -- Keep IDs stable so products can reference categories.
 INSERT INTO categories (id, name) VALUES
