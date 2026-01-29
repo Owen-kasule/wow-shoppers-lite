@@ -71,6 +71,21 @@ npm run dev
 ```
 
 Frontend runs on `http://localhost:5173` and calls the backend using `VITE_API_URL`.
+
+## Run both (one command)
+
+After you have configured the env files and migrated/seeded the database:
+
+```bash
+cd .
+npm install
+npm run install:all
+npm run dev
+```
+
+This starts:
+- backend on `http://localhost:3000`
+- frontend on `http://localhost:5173`
 # Wow Shoppers Lite (Sprint 1)
 
 Single-supermarket pilot for **Supermarket X**.
