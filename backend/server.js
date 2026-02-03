@@ -2,19 +2,39 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { Pool } = require('pg');
-const { getPgConfig } = require('./db/pgConfig');
+const dns = require('dns');
 
 dotenv.config();
 
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
-let pool;
-try {
-  pool = new Pool(getPgConfig());
-} catch (error) {
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
   // eslint-disable-next-line no-console
-  console.error(error.message || error);
+  console.error('Missing DATABASE_URL. Create backend/.env from backend/.env.example');
   process.exit(1);
 }
+
+const databaseSsl = process.env.DATABASE_SSL;
+const useSsl =
+  databaseSsl === 'true' ||
+  DATABASE_URL.includes('supabase.co') ||
+  DATABASE_URL.includes('pooler.supabase.com');
+
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ...(useSsl
+    ? {
+        ssl: {
+          rejectUnauthorized: false
+        }
+      }
+    : {})
+});
 
 const app = express();
 

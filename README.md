@@ -21,12 +21,11 @@ Sprint 1 delivers an end-to-end vertical slice:
 
 ## Database setup (Supabase)
 
-1) In Supabase, open your project → **Connect** → **Connection string** and copy the Postgres connection string (URI).
+1) In Supabase, open your project → **Connect** → **Session pooler** and copy the Postgres connection string (URI).
 2) Create `backend/.env` from `backend/.env.example` and set:
-	- `DATABASE_URL` to your Supabase connection string
-	- `DATABASE_SSL=true`
-
-## Backend (Express API)
+   - `DATABASE_URL` to your Supabase Session Pooler connection string
+   - `DATABASE_SSL=true` (auto-detected for Supabase URLs)
+   - Important: URL-encode special characters in password (`+` → `%2B`)
 
 ```bash
 cd backend
@@ -69,15 +68,18 @@ Frontend runs on `http://localhost:5173` and calls the backend using `VITE_API_U
 After you have configured the env files and migrated/seeded the database:
 
 ```bash
-cd .
 npm install
 npm run install:all
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
 This starts:
-- backend on `http://localhost:3000`
-- frontend on `http://localhost:5173`
+- Backend on `http://localhost:3000`
+- Frontend on `http://localhost:5173`
+
+To verify migration success: `npm run db:check`
 # Wow Shoppers Lite (Sprint 1)
 
 Single-supermarket pilot for **Supermarket X**.
