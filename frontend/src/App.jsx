@@ -126,7 +126,7 @@ export default function App() {
                 <div key={p.id} className="card">
                   <div className="cardTop">
                     <div className="name">{p.name}</div>
-                    <div className="price">UGX {Number.isFinite(price) ? price.toLocaleString() : p.price}</div>
+                    <div className="price">${Number.isFinite(price) ? price.toLocaleString() : p.price}</div>
                   </div>
                   <div className={isInStock ? 'stock in' : 'stock out'}>
                     {isInStock ? 'In stock' : 'Out of stock'}
