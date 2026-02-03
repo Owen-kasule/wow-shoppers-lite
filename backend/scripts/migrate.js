@@ -1,11 +1,12 @@
 const dotenv = require('dotenv');
 const { Client } = require('pg');
 const { runSqlFile } = require('./runSqlFile');
+const { getPgConfig } = require('../db/pgConfig');
 
 dotenv.config();
 
 async function main() {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client(getPgConfig());
   await client.connect();
   try {
     await runSqlFile(client, 'db/schema.sql');

@@ -2,21 +2,19 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { Pool } = require('pg');
+const { getPgConfig } = require('./db/pgConfig');
 
 dotenv.config();
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
+let pool;
+try {
+  pool = new Pool(getPgConfig());
+} catch (error) {
   // eslint-disable-next-line no-console
-  console.error('Missing DATABASE_URL. Create backend/.env from backend/.env.example');
+  console.error(error.message || error);
   process.exit(1);
 }
-
-const pool = new Pool({
-  connectionString: DATABASE_URL
-});
 
 const app = express();
 

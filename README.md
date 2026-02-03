@@ -17,22 +17,14 @@ Sprint 1 delivers an end-to-end vertical slice:
 ## Prerequisites
 
 - Node.js 18+
-- PostgreSQL running locally
+- A Supabase Postgres project
 
-Required DB connection string:
+## Database setup (Supabase)
 
-```
-postgresql://wowadmin:wow123@127.0.0.1:5432/wow_shoppers_lite
-```
-
-## Database setup
-
-Create the DB and user (skip if you already have them):
-
-```bash
-psql postgres -c "CREATE USER wowadmin WITH PASSWORD 'wow123';"
-psql postgres -c "CREATE DATABASE wow_shoppers_lite OWNER wowadmin;"
-```
+1) In Supabase, open your project → **Connect** → **Connection string** and copy the Postgres connection string (URI).
+2) Create `backend/.env` from `backend/.env.example` and set:
+	- `DATABASE_URL` to your Supabase connection string
+	- `DATABASE_SSL=true`
 
 ## Backend (Express API)
 
