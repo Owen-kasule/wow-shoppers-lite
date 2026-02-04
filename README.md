@@ -26,6 +26,7 @@ Sprint 1+2 delivers end-to-end e-commerce:
   backend/
   frontend/
   README.md
+  DB_CONNECTION.md  (for teammates)
 ```
 
 ## Prerequisites
