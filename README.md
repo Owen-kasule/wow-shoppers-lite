@@ -1,9 +1,23 @@
-# Wow Shoppers Lite — Sprint 1 (Supermarket X pilot)
+# Wow Shoppers Lite — Sprint 1+2 (Supermarket X pilot)
 
-Sprint 1 delivers an end-to-end vertical slice:
-- PostgreSQL database (schema + seed data)
+Sprint 1+2 delivers end-to-end e-commerce:
+- PostgreSQL database (Supabase) with schema + seed data
 - Express API (Node 18+, `pg`, `dotenv`, `cors`)
-- React UI (Vite) to browse/search/filter products
+- React UI (Vite) with product browsing, cart, checkout, and order tracking
+
+## Features
+
+**Sprint 1:**
+- Browse products with search and category filter
+- View product availability (in stock / out of stock)
+
+**Sprint 2:**
+- Add products to cart (localStorage)
+- Manage cart (update quantities, remove items)
+- Checkout with customer details and delivery/payment options
+- Order confirmation with order ID
+- Order tracking with status updates (placed → accepted → packed → dispatched → delivered)
+- Dev tools for testing order status changes
 
 ## Repo structure
 
@@ -80,6 +94,17 @@ This starts:
 - Frontend on `http://localhost:5173`
 
 To verify migration success: `npm run db:check`
+
+## Testing Sprint 2
+
+1) Browse products at `http://localhost:5173`
+2) Click "Add to Cart" on in-stock products
+3) Navigate to Cart (top nav) and adjust quantities
+4) Click "Proceed to Checkout"
+5) Fill customer details, choose delivery/payment, and submit
+6) View order confirmation with order ID
+7) Click "Track Order" to see order details and status
+8) Use "Dev Only: Update Status" buttons to test status transitions
 # Wow Shoppers Lite (Sprint 1)
 
 Single-supermarket pilot for **Supermarket X**.

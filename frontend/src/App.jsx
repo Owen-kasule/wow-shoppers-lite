@@ -1,7 +1,62 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiGet } from './api.js';
+import {
+  apiGet,
+  getCart,
+  addToCart,
+  updateCartQuantity,
+  removeFromCart,
+  clearCart,
+  getCartTotal
+} from './api.js';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function App() {
+  const [route, setRoute] = useState('products');
+  const [routeParams, setRouteParams] = useState({});
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const cart = getCart();
+    setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+  }, [route]);
+
+  const navigate = (path) => {
+    if (path.startsWith('order-confirmation/')) {
+      const orderId = path.split('/')[1];
+      setRouteParams({ orderId });
+      setRoute('order-confirmation');
+    } else if (path.startsWith('order/')) {
+      const orderId = path.split('/')[1];
+      setRouteParams({ orderId });
+      setRoute('order-tracking');
+    } else {
+      setRoute(path);
+      setRouteParams({});
+    }
+  };
+
+  return (
+    <div>
+      <nav className="nav">
+        <button onClick={() => navigate('products')}>Products</button>
+        <button onClick={() => navigate('cart')}>
+          Cart {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
+        </button>
+      </nav>
+
+      {route === 'products' && <ProductsPage onNavigate={navigate} />}
+      {route === 'cart' && <CartPage onNavigate={navigate} />}
+      {route === 'checkout' && <CheckoutPage onNavigate={navigate} />}
+      {route === 'order-confirmation' && (
+        <OrderConfirmationPage orderId={routeParams.orderId} onNavigate={navigate} />
+      )}
+      {route === 'order-tracking' && <OrderTrackingPage orderId={routeParams.orderId} />}
+    </div>
+  );
+}
+
+function ProductsPage({ onNavigate }) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
@@ -69,6 +124,11 @@ export default function App() {
     };
   }, [productParams]);
 
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    alert(`${product.name} added to cart`);
+  };
+
   return (
     <div className="page">
       <header className="header">
@@ -132,12 +192,386 @@ export default function App() {
                     {isInStock ? 'In stock' : 'Out of stock'}
                   </div>
                   <div className="category">{p.category_name}</div>
+                  {isInStock && (
+                    <button className="btnAddCart" onClick={() => handleAddToCart(p)}>
+                      Add to Cart
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function CartPage({ onNavigate }) {
+  const [cart, setCart] = useState([]);
+
+  useEffect(() => {
+    setCart(getCart());
+  }, []);
+
+  const handleUpdateQuantity = (productId, newQuantity) => {
+    const updated = updateCartQuantity(productId, newQuantity);
+    setCart(updated);
+  };
+
+  const handleRemove = (productId) => {
+    const updated = removeFromCart(productId);
+    setCart(updated);
+  };
+
+  const total = getCartTotal(cart);
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1>Your Cart</h1>
+      </header>
+
+      {cart.length === 0 ? (
+        <div className="empty">Your cart is empty.</div>
+      ) : (
+        <>
+          <div className="cartList">
+            {cart.map((item) => (
+              <div key={item.productId} className="cartItem">
+                <div className="cartItemName">{item.name}</div>
+                <div className="cartItemPrice">${item.price.toFixed(2)}</div>
+                <div className="cartItemQty">
+                  <button onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}>
+                    −
+                  </button>
+                  <span>{item.quantity}</span>
+                  <button onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}>
+                    +
+                  </button>
+                </div>
+                <div className="cartItemTotal">${(item.price * item.quantity).toFixed(2)}</div>
+                <button className="btnRemove" onClick={() => handleRemove(item.productId)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="cartSummary">
+            <div className="summaryLine">
+              <span>Total:</span>
+              <span className="totalPrice">${total.toFixed(2)}</span>
+            </div>
+            <button className="btnPrimary" onClick={() => onNavigate('checkout')}>
+              Proceed to Checkout
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CheckoutPage({ onNavigate }) {
+  const [cart, setCart] = useState([]);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const currentCart = getCart();
+    if (currentCart.length === 0) {
+      onNavigate('cart');
+    }
+    setCart(currentCart);
+  }, [onNavigate]);
+
+  const total = getCartTotal(cart);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    const items = cart.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity
+    }));
+
+    const body = {
+      customerName,
+      customerPhone,
+      deliveryMethod,
+      deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : null,
+      paymentMethod,
+      items
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.error || 'Order creation failed');
+      }
+
+      clearCart();
+      onNavigate(`order-confirmation/${json.orderId}`);
+    } catch (err) {
+      setError(err.message || 'Failed to create order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1>Checkout</h1>
+      </header>
+
+      <div className="checkoutContainer">
+        <div className="checkoutSummary">
+          <h2>Order Summary</h2>
+          {cart.map((item) => (
+            <div key={item.productId} className="summaryItem">
+              <span>
+                {item.name} x {item.quantity}
+              </span>
+              <span>${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="summaryTotal">
+            <strong>Total:</strong>
+            <strong>${total.toFixed(2)}</strong>
+          </div>
+        </div>
+
+        <form className="checkoutForm" onSubmit={handleSubmit}>
+          <h2>Customer Details</h2>
+
+          <label>
+            Name *
+            <input
+              required
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Your name"
+            />
+          </label>
+
+          <label>
+            Phone *
+            <input
+              required
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              placeholder="Phone number"
+            />
+          </label>
+
+          <label>
+            Delivery Method *
+            <select value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)}>
+              <option value="delivery">Delivery</option>
+              <option value="pickup">Pickup</option>
+            </select>
+          </label>
+
+          {deliveryMethod === 'delivery' && (
+            <label>
+              Delivery Address *
+              <textarea
+                required
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                placeholder="Enter delivery address"
+                rows={3}
+              />
+            </label>
+          )}
+
+          <label>
+            Payment Method *
+            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+              <option value="cash_on_delivery">Cash on Delivery</option>
+              <option value="mock">Mock Payment</option>
+            </select>
+          </label>
+
+          {error && <div className="error">{error}</div>}
+
+          <button type="submit" className="btnPrimary" disabled={loading}>
+            {loading ? 'Placing Order...' : 'Place Order'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function OrderConfirmationPage({ orderId, onNavigate }) {
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/orders/${orderId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        setOrder(data);
+      })
+      .catch((err) => setError(err.message || 'Failed to load order'))
+      .finally(() => setLoading(false));
+  }, [orderId]);
+
+  if (loading) return <div className="page">Loading...</div>;
+  if (error) return <div className="page error">{error}</div>;
+  if (!order) return <div className="page">Order not found</div>;
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1>Order Confirmed!</h1>
+      </header>
+
+      <div className="confirmation">
+        <p className="confirmMsg">Thank you for your order.</p>
+        <div className="confirmDetail">
+          <strong>Order ID:</strong> {order.orderId}
+        </div>
+        <div className="confirmDetail">
+          <strong>Status:</strong> {order.status}
+        </div>
+        <div className="confirmDetail">
+          <strong>Total:</strong> ${order.total.toFixed(2)}
+        </div>
+
+        <button className="btnPrimary" onClick={() => onNavigate(`order/${orderId}`)}>
+          Track Order
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OrderTrackingPage({ orderId }) {
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const fetchOrder = () => {
+    setLoading(true);
+    fetch(`${API_URL}/api/orders/${orderId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        setOrder(data);
+      })
+      .catch((err) => setError(err.message || 'Failed to load order'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchOrder();
+  }, [orderId]);
+
+  const handleStatusUpdate = async (newStatus) => {
+    setUpdatingStatus(true);
+    try {
+      const response = await fetch(`${API_URL}/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Failed to update status');
+      fetchOrder();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  if (loading) return <div className="page">Loading order...</div>;
+  if (error) return <div className="page error">{error}</div>;
+  if (!order) return <div className="page">Order not found</div>;
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1>Order Tracking</h1>
+      </header>
+
+      <div className="trackingContainer">
+        <div className="trackingDetail">
+          <strong>Order ID:</strong> {order.orderId}
+        </div>
+        <div className="trackingDetail">
+          <strong>Status:</strong> <span className="statusBadge">{order.status}</span>
+        </div>
+        <div className="trackingDetail">
+          <strong>Customer:</strong> {order.customerName}
+        </div>
+        <div className="trackingDetail">
+          <strong>Phone:</strong> {order.customerPhone}
+        </div>
+        <div className="trackingDetail">
+          <strong>Delivery Method:</strong> {order.deliveryMethod}
+        </div>
+        {order.deliveryAddress && (
+          <div className="trackingDetail">
+            <strong>Address:</strong> {order.deliveryAddress}
+          </div>
+        )}
+        <div className="trackingDetail">
+          <strong>Payment:</strong> {order.paymentMethod}
+        </div>
+
+        <h2>Items</h2>
+        <div className="orderItems">
+          {order.items.map((item) => (
+            <div key={item.productId} className="orderItem">
+              <span>{item.name}</span>
+              <span>
+                {item.quantity} x ${item.unitPrice.toFixed(2)} = ${item.lineTotal.toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="trackingTotal">
+          <strong>Total:</strong> <strong>${order.total.toFixed(2)}</strong>
+        </div>
+
+        <div className="devControls">
+          <h3>Dev Only: Update Status</h3>
+          <div className="statusButtons">
+            {['placed', 'accepted', 'packed', 'dispatched', 'delivered'].map((status) => (
+              <button
+                key={status}
+                onClick={() => handleStatusUpdate(status)}
+                disabled={updatingStatus || order.status === status}
+                className="btnSmall"
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

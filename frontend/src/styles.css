@@ -151,3 +151,320 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Sprint 2: Navigation */
+.nav {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.nav button {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.nav button:hover {
+  background: #f9fafb;
+}
+
+.cartBadge {
+  font-weight: 700;
+  color: #059669;
+}
+
+/* Sprint 2: Cart */
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.cartList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cartItem {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 120px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.cartItemName {
+  font-weight: 600;
+}
+
+.cartItemQty {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cartItemQty button {
+  padding: 4px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+
+.cartItemQty button:hover {
+  background: #f9fafb;
+}
+
+.btnRemove {
+  padding: 6px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.cartSummary {
+  margin-top: 24px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.totalPrice {
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.btnPrimary {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #059669;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btnPrimary:hover {
+  background: #047857;
+}
+
+.btnPrimary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btnAddCart {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid #059669;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btnAddCart:hover {
+  background: #d1fae5;
+}
+
+/* Sprint 2: Checkout */
+.checkoutContainer {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.checkoutSummary {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.checkoutSummary h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #e5e7eb;
+  font-size: 18px;
+}
+
+.checkoutForm {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.checkoutForm h2 {
+  margin: 0 0 20px;
+  font-size: 18px;
+}
+
+.checkoutForm label {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.checkoutForm input,
+.checkoutForm select,
+.checkoutForm textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* Sprint 2: Confirmation */
+.confirmation {
+  max-width: 500px;
+  margin: 24px auto;
+  padding: 32px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.confirmMsg {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.confirmDetail {
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+}
+
+.confirmation .btnPrimary {
+  margin-top: 24px;
+}
+
+/* Sprint 2: Tracking */
+.trackingContainer {
+  max-width: 700px;
+  margin: 20px auto;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.trackingDetail {
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.orderItems {
+  margin-top: 12px;
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.trackingTotal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #e5e7eb;
+  font-size: 18px;
+}
+
+.devControls {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px dashed #e5e7eb;
+}
+
+.devControls h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.statusButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btnSmall {
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.btnSmall:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.btnSmall:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

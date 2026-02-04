@@ -142,6 +142,190 @@ app.get('/api/products', async (req, res, next) => {
   }
 });
 
+app.post('/api/orders', async (req, res, next) => {
+  try {
+    const { customerName, customerPhone, deliveryMethod, deliveryAddress, paymentMethod, items } =
+      req.body;
+
+    // Validation
+    const errors = [];
+    if (!customerName || customerName.trim().length < 2) {
+      errors.push('customerName must be at least 2 characters');
+    }
+    if (!customerPhone || customerPhone.trim().length < 7) {
+      errors.push('customerPhone must be at least 7 characters');
+    }
+    if (!deliveryMethod || !['delivery', 'pickup'].includes(deliveryMethod)) {
+      errors.push('deliveryMethod must be delivery or pickup');
+    }
+    if (deliveryMethod === 'delivery') {
+      if (!deliveryAddress || deliveryAddress.trim().length < 5) {
+        errors.push('deliveryAddress required (5+ chars) when deliveryMethod is delivery');
+      }
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      errors.push('items must be a non-empty array');
+    } else {
+      items.forEach((item, idx) => {
+        if (!item.productId) errors.push(`items[${idx}].productId is required`);
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+          errors.push(`items[${idx}].quantity must be integer >= 1`);
+        }
+      });
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({ error: errors.join('; ') });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Fetch product details and validate
+      const productIds = items.map((i) => i.productId);
+      const productResult = await client.query(
+        'SELECT id, name, price FROM products WHERE id = ANY($1::uuid[])',
+        [productIds]
+      );
+      const productMap = new Map(productResult.rows.map((p) => [p.id, p]));
+
+      const orderItems = [];
+      let total = 0;
+      for (const item of items) {
+        const product = productMap.get(item.productId);
+        if (!product) {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
+        const unitPrice = parseFloat(product.price);
+        const lineTotal = unitPrice * item.quantity;
+        total += lineTotal;
+        orderItems.push({
+          productId: item.productId,
+          name: product.name,
+          quantity: item.quantity,
+          unitPrice,
+          lineTotal
+        });
+      }
+
+      const orderResult = await client.query(
+        `INSERT INTO orders (customer_name, customer_phone, delivery_method, delivery_address, payment_method, total)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, status, created_at`,
+        [
+          customerName.trim(),
+          customerPhone.trim(),
+          deliveryMethod,
+          deliveryMethod === 'delivery' ? deliveryAddress.trim() : null,
+          paymentMethod || 'cash_on_delivery',
+          total
+        ]
+      );
+
+      const order = orderResult.rows[0];
+
+      for (const item of orderItems) {
+        await client.query(
+          'INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES ($1, $2, $3, $4)',
+          [order.id, item.productId, item.quantity, item.unitPrice]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      res.status(201).json({
+        orderId: order.id,
+        status: order.status,
+        total,
+        items: orderItems,
+        createdAt: order.created_at
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/orders/:orderId', async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    const orderResult = await pool.query(
+      'SELECT id, customer_name, customer_phone, delivery_method, delivery_address, payment_method, status, total, created_at FROM orders WHERE id = $1',
+      [orderId]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = orderResult.rows[0];
+
+    const itemsResult = await pool.query(
+      `SELECT oi.product_id, p.name, oi.quantity, oi.unit_price
+       FROM order_items oi
+       JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = $1
+       ORDER BY oi.created_at ASC`,
+      [orderId]
+    );
+
+    const items = itemsResult.rows.map((row) => ({
+      productId: row.product_id,
+      name: row.name,
+      quantity: row.quantity,
+      unitPrice: parseFloat(row.unit_price),
+      lineTotal: parseFloat(row.unit_price) * row.quantity
+    }));
+
+    res.json({
+      orderId: order.id,
+      status: order.status,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      deliveryMethod: order.delivery_method,
+      deliveryAddress: order.delivery_address,
+      paymentMethod: order.payment_method,
+      items,
+      total: parseFloat(order.total),
+      createdAt: order.created_at
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/orders/:orderId/status', async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ['placed', 'accepted', 'packed', 'dispatched', 'delivered'];
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const result = await pool.query(
+      'UPDATE orders SET status = $1 WHERE id = $2 RETURNING id, status',
+      [status, orderId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({ orderId: result.rows[0].id, status: result.rows[0].status });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({ data: [], total: 0, error: 'Not found' });
 });
