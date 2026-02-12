@@ -142,6 +142,42 @@ app.get('/api/products', async (req, res, next) => {
   }
 });
 
+app.get('/api/orders', async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM orders');
+    const total = parseInt(countResult.rows[0].count);
+
+    const result = await pool.query(
+      `SELECT id, customer_name, status, total, created_at, updated_at
+       FROM orders
+       ORDER BY created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    res.json({
+      data: result.rows.map((row) => ({
+        orderId: row.id,
+        customerName: row.customer_name,
+        status: row.status,
+        total: parseFloat(row.total),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post('/api/orders', async (req, res, next) => {
   try {
     const { customerName, customerPhone, deliveryMethod, deliveryAddress, paymentMethod, items } =
@@ -312,7 +348,7 @@ app.patch('/api/orders/:orderId/status', async (req, res, next) => {
     }
 
     const result = await pool.query(
-      'UPDATE orders SET status = $1 WHERE id = $2 RETURNING id, status',
+      'UPDATE orders SET status = $1 WHERE id = $2 RETURNING id, status, updated_at',
       [status, orderId]
     );
 
@@ -320,7 +356,11 @@ app.patch('/api/orders/:orderId/status', async (req, res, next) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json({ orderId: result.rows[0].id, status: result.rows[0].status });
+    res.json({
+      orderId: result.rows[0].id,
+      status: result.rows[0].status,
+      updatedAt: result.rows[0].updated_at
+    });
   } catch (error) {
     next(error);
   }
