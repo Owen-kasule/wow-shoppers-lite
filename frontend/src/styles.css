@@ -642,3 +642,135 @@ input#search {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.btnSmall.active {
+  background: #ecfdf5;
+  border-color: #059669;
+  color: #065f46;
+  font-weight: 600;
+}
+
+/* Sprint 3: Success message */
+.success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Sprint 3: Admin controls */
+.adminControls {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.adminControls h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+/* Sprint 3: Admin stats */
+.adminStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stat {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat strong {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 6px;
+  color: #059669;
+}
+
+.stat span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Sprint 3: Orders table */
+.ordersTable {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ordersTable table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ordersTable th,
+.ordersTable td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ordersTable th {
+  background: #f9fafb;
+  font-weight: 600;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.ordersTable td {
+  font-size: 14px;
+}
+
+.ordersTable .orderId {
+  font-family: monospace;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ordersTable tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Sprint 3: Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-size: 14px;
+  color: #6b7280;
+}

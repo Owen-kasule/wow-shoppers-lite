@@ -46,6 +46,9 @@ export default function App() {
       const orderId = path.split('/')[1];
       setRouteParams({ orderId });
       setRoute('order-tracking');
+    } else if (path === 'admin/orders') {
+      setRoute('admin-orders');
+      setRouteParams({});
     } else {
       setRoute(path);
       setRouteParams({});
@@ -72,22 +75,14 @@ export default function App() {
   };
 
   return (
-    <div className="site">
-      <div className="shell">
-        <nav className="nav">
-          <div className="brand">Wow Shoppers Lite</div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button onClick={() => navigate('products')}>Products</button>
-            <button onClick={() => navigate('cart')}>
-              <svg className="icon-cart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path d="M3 3h2l.4 2M7 13h10l3-8H6.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="10" cy="20" r="1" fill="currentColor"/>
-                <circle cx="18" cy="20" r="1" fill="currentColor"/>
-              </svg>
-              Cart {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
-            </button>
-          </div>
-        </nav>
+    <div>
+      <nav className="nav">
+        <button onClick={() => navigate('products')}>Products</button>
+        <button onClick={() => navigate('cart')}>
+          Cart {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
+        </button>
+        <button onClick={() => navigate('admin/orders')}>Admin</button>
+      </nav>
 
         {route === 'products' && <ProductsPage onNavigate={navigate} onAddRequest={openAddModal} />}
         {route === 'cart' && <CartPage onNavigate={navigate} />}
@@ -117,8 +112,10 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {toast && <div className="toast">{toast}</div>}
+      {route === 'order-tracking' && (
+        <OrderTrackingPage orderId={routeParams.orderId} onNavigate={navigate} />
+      )}
+      {route === 'admin-orders' && <AdminOrdersPage onNavigate={navigate} />}
     </div>
   );
 }
@@ -533,14 +530,16 @@ function OrderConfirmationPage({ orderId, onNavigate }) {
   );
 }
 
-function OrderTrackingPage({ orderId }) {
+function OrderTrackingPage({ orderId, onNavigate }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
   const fetchOrder = () => {
     setLoading(true);
+    setUpdateSuccess(false);
     fetch(`${API_URL}/api/orders/${orderId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -557,6 +556,7 @@ function OrderTrackingPage({ orderId }) {
 
   const handleStatusUpdate = async (newStatus) => {
     setUpdatingStatus(true);
+    setUpdateSuccess(false);
     try {
       const response = await fetch(`${API_URL}/api/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -565,6 +565,7 @@ function OrderTrackingPage({ orderId }) {
       });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || 'Failed to update status');
+      setUpdateSuccess(true);
       fetchOrder();
     } catch (err) {
       alert(err.message);
@@ -582,6 +583,8 @@ function OrderTrackingPage({ orderId }) {
       <header className="header">
         <h1>Order Tracking</h1>
       </header>
+
+      {updateSuccess && <div className="success">Order status updated successfully!</div>}
 
       <div className="trackingContainer">
         <div className="trackingDetail">
@@ -624,15 +627,15 @@ function OrderTrackingPage({ orderId }) {
           <strong>Total:</strong> <strong>${order.total.toFixed(2)}</strong>
         </div>
 
-        <div className="devControls">
-          <h3>Dev Only: Update Status</h3>
+        <div className="adminControls">
+          <h3>Update Order Status</h3>
           <div className="statusButtons">
             {['placed', 'accepted', 'packed', 'dispatched', 'delivered'].map((status) => (
               <button
                 key={status}
                 onClick={() => handleStatusUpdate(status)}
                 disabled={updatingStatus || order.status === status}
-                className="btnSmall"
+                className={order.status === status ? 'btnSmall active' : 'btnSmall'}
               >
                 {status}
               </button>
@@ -640,6 +643,131 @@ function OrderTrackingPage({ orderId }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdminOrdersPage({ onNavigate }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const fetchOrders = () => {
+    setLoading(true);
+    setError('');
+    fetch(`${API_URL}/api/orders?page=${page}&limit=20`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        setOrders(data.data || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+      })
+      .catch((err) => setError(err.message || 'Failed to load orders'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [page]);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleString();
+  };
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1>Admin: Order Management</h1>
+        <p className="subtitle">Manage all customer orders</p>
+      </header>
+
+      {error && <div className="error">{error}</div>}
+
+      <div className="adminStats">
+        <div className="stat">
+          <strong>{total}</strong>
+          <span>Total Orders</span>
+        </div>
+        <div className="stat">
+          <strong>{page}</strong>
+          <span>Current Page</span>
+        </div>
+        <div className="stat">
+          <strong>{totalPages}</strong>
+          <span>Total Pages</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="loading">Loading orders...</div>
+      ) : (
+        <>
+          <div className="ordersTable">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center' }}>
+                      No orders found
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map((order) => (
+                    <tr key={order.orderId}>
+                      <td className="orderId">{order.orderId.slice(0, 8)}...</td>
+                      <td>{order.customerName}</td>
+                      <td>
+                        <span className="statusBadge">{order.status}</span>
+                      </td>
+                      <td>${order.total.toFixed(2)}</td>
+                      <td>{formatDate(order.createdAt)}</td>
+                      <td>
+                        <button
+                          className="btnSmall"
+                          onClick={() => onNavigate(`order/${order.orderId}`)}
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pagination">
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+              Previous
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

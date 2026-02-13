@@ -1,10 +1,10 @@
-# Wow Shoppers Lite — Sprint 1+2 (Supermarket X pilot)
+# Wow Shoppers Lite — Sprint 1+2+3 (Supermarket X pilot)
 
 Sprint 1+2 delivers end-to-end e-commerce:
 
 - PostgreSQL database (Supabase) with schema + seed data
 - Express API (Node 18+, `pg`, `dotenv`, `cors`)
-- React UI (Vite) with product browsing, cart, checkout, and order tracking
+- React UI (Vite) with product browsing, cart, checkout, order tracking, and admin order management
 
 ## Features
 
@@ -20,7 +20,14 @@ Sprint 1+2 delivers end-to-end e-commerce:
 - Checkout with customer details and delivery/payment options
 - Order confirmation with order ID
 - Order tracking with status updates (placed → accepted → packed → dispatched → delivered)
-- Dev tools for testing order status changes
+
+**Sprint 3:**
+- Admin order management UI at `/admin/orders`
+- View all orders with pagination (20 orders per page)
+- Order status tracking for customers
+- Admin can update order status from order detail page
+- Success feedback on status updates
+- Automatic `updated_at` timestamp on status changes
 
 ## Repo structure
 
@@ -60,6 +67,7 @@ Backend runs on `http://localhost:3000`.
 
 ### API routes
 
+#### Products & Categories
 - `GET /health` → `{ ok: true }`
 - `GET /api/categories` → `{ data, total }`
 - `GET /api/products` → `{ data, total }`
@@ -67,6 +75,12 @@ Backend runs on `http://localhost:3000`.
     - `search` (case-insensitive match on product name)
     - `categoryId` (filter by category UUID)
     - `inStock` (`true`/`false`)
+
+#### Orders (Sprint 2+3)
+- `POST /api/orders` → Create new order
+- `GET /api/orders` → List all orders (pagination: `?page=1&limit=20`)
+- `GET /api/orders/:orderId` → Get full order details
+- `PATCH /api/orders/:orderId/status` → Update order status
 
 CORS is enabled for `http://localhost:5173`.
 
@@ -100,91 +114,32 @@ This starts:
 
 To verify migration success: `npm run db:check`
 
-## Testing Sprint 2
+## Testing Sprint 3
 
-1. Browse products at `http://localhost:5173`
-2. Click "Add to Cart" on in-stock products
-3. Navigate to Cart (top nav) and adjust quantities
-4. Click "Proceed to Checkout"
-5. Fill customer details, choose delivery/payment, and submit
-6. View order confirmation with order ID
-7. Click "Track Order" to see order details and status
-8. Use "Dev Only: Update Status" buttons to test status transitions
+### Customer Flow:
+1) Browse products at `http://localhost:5173`
+2) Click "Add to Cart" on in-stock products
+3) Navigate to Cart (top nav) and adjust quantities
+4) Click "Proceed to Checkout"
+5) Fill customer details, choose delivery/payment, and submit
+6) View order confirmation with order ID
+7) Click "Track Order" to see order details and current status
 
-# Wow Shoppers Lite (Sprint 1)
+### Admin Flow:
+1) Navigate to "Admin" in the top navigation
+2) View all orders in the system (paginated, 20 per page)
+3) Click "View Details" on any order to see full order information
+4) Use "Update Order Status" buttons to change order status
+5) See success confirmation after status update
+6) Navigate back to Admin Orders to see updated status in the list
 
-Single-supermarket pilot for **Supermarket X**.
-
-Sprint 1 delivers (end-to-end):
-
-- PostgreSQL (seeded) + Express API + React UI
-- Browse products, search by name, filter by category
-
-Repo structure:
-/
-  backend/
-  frontend/
-  README.md
-
-## Prerequisites
-
-- Node.js 18+
-- PostgreSQL running locally
-
-Database connection string (required):
-`postgresql://wowadmin:wow123@127.0.0.1:5432/wow_shoppers_lite`
-
-## 1) Database setup (PostgreSQL)
-
-Create the DB/user if you don’t already have them:
-
-```bash
-psql postgres -c "CREATE USER wowadmin WITH PASSWORD 'wow123';"
-psql postgres -c "CREATE DATABASE wow_shoppers_lite OWNER wowadmin;"
-```
-
-## 2) Backend setup (Express + pg)
-
-```bash
-cd backend
-npm install
-cp .env.example .env
-npm run db:migrate
-npm run db:seed
-npm run dev
-```
-
-Backend runs on `http://localhost:3000`.
-
-Endpoints:
-
-- `GET /health` → `{ ok: true }`
-- `GET /api/categories` → `{ data, total }`
-- `GET /api/products` → `{ data, total }`
-  - Query params:
-    - `search` (case-insensitive match on name)
-    - `categoryId` (uuid)
-    - `inStock` (`true`/`false`)
-
-## 3) Frontend setup (React + Vite)
-
-```bash
-cd frontend
-npm install
-cp .env.example .env
-npm run dev
-```
-
-Frontend runs on `http://localhost:5173` and calls the backend using `VITE_API_URL`.
-
-## Suggested commit (after verifying locally)
-
-```bash
-git add .
-git commit -m "Sprint 1: Postgres + Express API + React products UI"
-```
-
-Wow Shoppers Lite is a single supermarket ecommerce MVP with clear structure and documentation, designed to be easily discoverable online and clearly understood by both people and modern search and AI systems.
+### Testing Order Status Updates:
+Test the complete order lifecycle:
+- **placed**: Initial order status (automatic)
+- **accepted**: Admin accepts the order
+- **packed**: Order is being prepared
+- **dispatched**: Order is out for delivery
+- **delivered**: Order completed
 
 ## Team Quotes
 

@@ -30,8 +30,20 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method text NOT NULL DEFAULT 'cash_on_delivery',
   status text NOT NULL DEFAULT 'placed' CHECK (status IN ('placed', 'accepted', 'packed', 'dispatched', 'delivered')),
   total numeric(12,2) NOT NULL DEFAULT 0,
-  created_at timestamp DEFAULT now()
+  created_at timestamp DEFAULT now(),
+  updated_at timestamp DEFAULT now()
 );
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE IF NOT EXISTS order_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
