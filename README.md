@@ -1,6 +1,7 @@
 # Wow Shoppers Lite — Sprint 1+2+3 (Supermarket X pilot)
 
-Sprint 1+2+3 delivers complete e-commerce with admin functionality:
+Sprint 1+2 delivers end-to-end e-commerce:
+
 - PostgreSQL database (Supabase) with schema + seed data
 - Express API (Node 18+, `pg`, `dotenv`, `cors`)
 - React UI (Vite) with product browsing, cart, checkout, order tracking, and admin order management
@@ -8,10 +9,12 @@ Sprint 1+2+3 delivers complete e-commerce with admin functionality:
 ## Features
 
 **Sprint 1:**
+
 - Browse products with search and category filter
 - View product availability (in stock / out of stock)
 
 **Sprint 2:**
+
 - Add products to cart (localStorage)
 - Manage cart (update quantities, remove items)
 - Checkout with customer details and delivery/payment options
@@ -43,8 +46,8 @@ Sprint 1+2+3 delivers complete e-commerce with admin functionality:
 
 ## Database setup (Supabase)
 
-1) In Supabase, open your project → **Connect** → **Session pooler** and copy the Postgres connection string (URI).
-2) Create `backend/.env` from `backend/.env.example` and set:
+1. In Supabase, open your project → **Connect** → **Session pooler** and copy the Postgres connection string (URI).
+2. Create `backend/.env` from `backend/.env.example` and set:
    - `DATABASE_URL` to your Supabase Session Pooler connection string
    - `DATABASE_SSL=true` (auto-detected for Supabase URLs)
    - Important: URL-encode special characters in password (`+` → `%2B`)
@@ -105,6 +108,7 @@ npm run dev
 ```
 
 This starts:
+
 - Backend on `http://localhost:3000`
 - Frontend on `http://localhost:5173`
 
