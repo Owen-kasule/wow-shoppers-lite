@@ -75,14 +75,24 @@ export default function App() {
   };
 
   return (
-    <div>
-      <nav className="nav">
-        <button onClick={() => navigate('products')}>Products</button>
-        <button onClick={() => navigate('cart')}>
-          Cart {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
-        </button>
-        <button onClick={() => navigate('admin/orders')}>Admin</button>
-      </nav>
+    <div className="site">
+      <div className="shell">
+        <nav className="nav">
+           <div className="brand">Wow Shoppers Lite</div>
+           <div className="nav-actions">
+             <button onClick={() => navigate('products')}>Products</button>
+             <button onClick={() => navigate('cart')}>
+               <svg className="icon-cart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                 <path d="M3 3h2l.4 2M7 13h10l3-8H6.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                 <circle cx="10" cy="20" r="1" fill="currentColor"/>
+                 <circle cx="18" cy="20" r="1" fill="currentColor"/>
+               </svg>
+               <span style={{ marginLeft: 6 }}>Cart</span>
+               {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
+             </button>
+             <button onClick={() => navigate('admin/orders')}>Admin</button>
+           </div>
+        </nav>
 
         {route === 'products' && <ProductsPage onNavigate={navigate} onAddRequest={openAddModal} />}
         {route === 'cart' && <CartPage onNavigate={navigate} />}
@@ -91,31 +101,31 @@ export default function App() {
           <OrderConfirmationPage orderId={routeParams.orderId} onNavigate={navigate} />
         )}
         {route === 'order-tracking' && <OrderTrackingPage orderId={routeParams.orderId} />}
-      </div>
+        {route === 'admin-orders' && <AdminOrdersPage onNavigate={navigate} />}
+
         {addModalOpen && modalProduct && (
-        <div className="addModal">
-          <div className="addModalBox">
-            <h3 className="modal-title">Add to cart</h3>
-            <div className="modal-product">{modalProduct.name}</div>
-            <label className="modal-label">Quantity</label>
-            <input
-              className="modal-qty"
-              type="number"
-              min={1}
-              value={modalQty}
-              onChange={(e) => setModalQty(Number(e.target.value) || 1)}
-            />
-            <div className="modal-actions">
-              <button className="btn btn--primary" onClick={() => confirmAdd(modalQty)}>Add to Cart</button>
-              <button className="btn btn--outline" onClick={closeAddModal}>Cancel</button>
+          <div className="addModal">
+            <div className="addModalBox">
+              <h3 className="modal-title">Add to cart</h3>
+              <div className="modal-product">{modalProduct.name}</div>
+              <label className="modal-label">Quantity</label>
+              <input
+                className="modal-qty"
+                type="number"
+                min={1}
+                value={modalQty}
+                onChange={(e) => setModalQty(Number(e.target.value) || 1)}
+              />
+              <div className="modal-actions">
+                <button className="btn btn--primary" onClick={() => confirmAdd(modalQty)}>Add to Cart</button>
+                <button className="btn btn--outline" onClick={closeAddModal}>Cancel</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      {route === 'order-tracking' && (
-        <OrderTrackingPage orderId={routeParams.orderId} onNavigate={navigate} />
-      )}
-      {route === 'admin-orders' && <AdminOrdersPage onNavigate={navigate} />}
+        )}
+
+        {toast && <div className="toast">{toast}</div>}
+      </div>
     </div>
   );
 }
