@@ -15,11 +15,27 @@ export default function App() {
   const [route, setRoute] = useState('products');
   const [routeParams, setRouteParams] = useState({});
   const [cartCount, setCartCount] = useState(0);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [modalProduct, setModalProduct] = useState(null);
+  const [modalQty, setModalQty] = useState(1);
+  const [toast, setToast] = useState('');
 
   useEffect(() => {
+    // set initial cart count
     const cart = getCart();
     setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-  }, [route]);
+
+    // update cart count whenever cart is changed elsewhere
+    const handler = (e) => {
+      try {
+        const newCart = e?.detail ?? getCart();
+        setCartCount(newCart.reduce((sum, item) => sum + item.quantity, 0));
+      } catch (err) {}
+    };
+
+    window.addEventListener('cartUpdated', handler);
+    return () => window.removeEventListener('cartUpdated', handler);
+  }, []);
 
   const navigate = (path) => {
     if (path.startsWith('order-confirmation/')) {
@@ -36,27 +52,78 @@ export default function App() {
     }
   };
 
-  return (
-    <div>
-      <nav className="nav">
-        <button onClick={() => navigate('products')}>Products</button>
-        <button onClick={() => navigate('cart')}>
-          Cart {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
-        </button>
-      </nav>
+  const openAddModal = (product) => {
+    setModalProduct(product);
+    setModalQty(1);
+    setAddModalOpen(true);
+  };
 
-      {route === 'products' && <ProductsPage onNavigate={navigate} />}
-      {route === 'cart' && <CartPage onNavigate={navigate} />}
-      {route === 'checkout' && <CheckoutPage onNavigate={navigate} />}
-      {route === 'order-confirmation' && (
-        <OrderConfirmationPage orderId={routeParams.orderId} onNavigate={navigate} />
+  const closeAddModal = () => {
+    setAddModalOpen(false);
+    setModalProduct(null);
+  };
+
+  const confirmAdd = (qty) => {
+    if (!modalProduct) return;
+    addToCart(modalProduct, qty);
+    setToast(`${modalProduct.name} × ${qty} added to cart`);
+    setTimeout(() => setToast(''), 2500);
+    closeAddModal();
+  };
+
+  return (
+    <div className="site">
+      <div className="shell">
+        <nav className="nav">
+          <div className="brand">Wow Shoppers Lite</div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button onClick={() => navigate('products')}>Products</button>
+            <button onClick={() => navigate('cart')}>
+              <svg className="icon-cart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <path d="M3 3h2l.4 2M7 13h10l3-8H6.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="10" cy="20" r="1" fill="currentColor"/>
+                <circle cx="18" cy="20" r="1" fill="currentColor"/>
+              </svg>
+              Cart {cartCount > 0 && <span className="cartBadge">({cartCount})</span>}
+            </button>
+          </div>
+        </nav>
+
+        {route === 'products' && <ProductsPage onNavigate={navigate} onAddRequest={openAddModal} />}
+        {route === 'cart' && <CartPage onNavigate={navigate} />}
+        {route === 'checkout' && <CheckoutPage onNavigate={navigate} />}
+        {route === 'order-confirmation' && (
+          <OrderConfirmationPage orderId={routeParams.orderId} onNavigate={navigate} />
+        )}
+        {route === 'order-tracking' && <OrderTrackingPage orderId={routeParams.orderId} />}
+      </div>
+        {addModalOpen && modalProduct && (
+        <div className="addModal">
+          <div className="addModalBox">
+            <h3 className="modal-title">Add to cart</h3>
+            <div className="modal-product">{modalProduct.name}</div>
+            <label className="modal-label">Quantity</label>
+            <input
+              className="modal-qty"
+              type="number"
+              min={1}
+              value={modalQty}
+              onChange={(e) => setModalQty(Number(e.target.value) || 1)}
+            />
+            <div className="modal-actions">
+              <button className="btn btn--primary" onClick={() => confirmAdd(modalQty)}>Add to Cart</button>
+              <button className="btn btn--outline" onClick={closeAddModal}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
-      {route === 'order-tracking' && <OrderTrackingPage orderId={routeParams.orderId} />}
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
 
-function ProductsPage({ onNavigate }) {
+function ProductsPage({ onNavigate, onAddRequest }) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
@@ -125,8 +192,9 @@ function ProductsPage({ onNavigate }) {
   }, [productParams]);
 
   const handleAddToCart = (product) => {
+    if (typeof onAddRequest === 'function') return onAddRequest(product);
+    // fallback
     addToCart(product);
-    alert(`${product.name} added to cart`);
   };
 
   return (
