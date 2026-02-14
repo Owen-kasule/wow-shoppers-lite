@@ -45,6 +45,25 @@ app.use(
 );
 app.use(express.json());
 
+// Response helpers for consistency
+function successResponse(data) {
+  return data;
+}
+
+function errorResponse(error, message, details = null) {
+  const response = { error, message };
+  if (details) response.details = details;
+  return response;
+}
+
+function validationErrorResponse(message, details) {
+  return errorResponse('VALIDATION_ERROR', message, details);
+}
+
+function notFoundErrorResponse(resource) {
+  return errorResponse('NOT_FOUND', `${resource} not found`);
+}
+
 app.get('/health', (req, res) => {
   res.json({ ok: true });
 });
@@ -54,7 +73,7 @@ app.get('/api/categories', async (req, res, next) => {
     const result = await pool.query(
       'SELECT id, name, created_at FROM categories ORDER BY name ASC'
     );
-    res.json({ data: result.rows, total: result.rowCount });
+    res.json({ categories: result.rows, count: result.rowCount });
   } catch (error) {
     next(error);
   }
@@ -80,19 +99,15 @@ app.get('/api/products', async (req, res, next) => {
     const inStock = parseBoolean(req.query.inStock);
 
     if (inStock === null) {
-      return res.status(400).json({
-        data: [],
-        total: 0,
-        error: 'Invalid inStock. Use true or false.'
-      });
+      return res.status(400).json(
+        validationErrorResponse('Invalid inStock parameter', { inStock: 'Must be true or false' })
+      );
     }
 
     if (categoryId !== undefined && !isUuid(categoryId)) {
-      return res.status(400).json({
-        data: [],
-        total: 0,
-        error: 'Invalid categoryId. Must be a UUID.'
-      });
+      return res.status(400).json(
+        validationErrorResponse('Invalid categoryId parameter', { categoryId: 'Must be a valid UUID' })
+      );
     }
 
     const whereClauses = [];
@@ -136,7 +151,7 @@ app.get('/api/products', async (req, res, next) => {
     `;
 
     const result = await pool.query(query, params);
-    res.json({ data: result.rows, total: result.rowCount });
+    res.json({ products: result.rows, count: result.rowCount });
   } catch (error) {
     next(error);
   }
@@ -160,7 +175,7 @@ app.get('/api/orders', async (req, res, next) => {
     );
 
     res.json({
-      data: result.rows.map((row) => ({
+      orders: result.rows.map((row) => ({
         orderId: row.id,
         customerName: row.customer_name,
         status: row.status,
@@ -168,7 +183,7 @@ app.get('/api/orders', async (req, res, next) => {
         createdAt: row.created_at,
         updatedAt: row.updated_at
       })),
-      total,
+      count: total,
       page,
       limit,
       totalPages: Math.ceil(total / limit)
@@ -183,35 +198,56 @@ app.post('/api/orders', async (req, res, next) => {
     const { customerName, customerPhone, deliveryMethod, deliveryAddress, paymentMethod, items } =
       req.body;
 
-    // Validation
-    const errors = [];
-    if (!customerName || customerName.trim().length < 2) {
-      errors.push('customerName must be at least 2 characters');
+    // Comprehensive validation with structured errors
+    const validationErrors = {};
+    
+    if (!customerName || typeof customerName !== 'string' || customerName.trim().length < 2) {
+      validationErrors.customerName = 'Must be at least 2 characters';
     }
-    if (!customerPhone || customerPhone.trim().length < 7) {
-      errors.push('customerPhone must be at least 7 characters');
+    
+    if (!customerPhone || typeof customerPhone !== 'string' || customerPhone.trim().length < 7) {
+      validationErrors.customerPhone = 'Must be at least 7 characters';
     }
+    
     if (!deliveryMethod || !['delivery', 'pickup'].includes(deliveryMethod)) {
-      errors.push('deliveryMethod must be delivery or pickup');
+      validationErrors.deliveryMethod = 'Must be either "delivery" or "pickup"';
     }
+    
     if (deliveryMethod === 'delivery') {
-      if (!deliveryAddress || deliveryAddress.trim().length < 5) {
-        errors.push('deliveryAddress required (5+ chars) when deliveryMethod is delivery');
+      if (!deliveryAddress || typeof deliveryAddress !== 'string' || deliveryAddress.trim().length < 5) {
+        validationErrors.deliveryAddress = 'Required when delivery method is "delivery" (min 5 characters)';
       }
     }
+    
+    if (paymentMethod && !['cash_on_delivery', 'mock'].includes(paymentMethod)) {
+      validationErrors.paymentMethod = 'Must be either "cash_on_delivery" or "mock"';
+    }
+    
     if (!Array.isArray(items) || items.length === 0) {
-      errors.push('items must be a non-empty array');
+      validationErrors.items = 'Must be a non-empty array';
     } else {
+      const itemErrors = [];
       items.forEach((item, idx) => {
-        if (!item.productId) errors.push(`items[${idx}].productId is required`);
+        const itemError = {};
+        if (!item.productId) {
+          itemError.productId = 'Required';
+        }
         if (!Number.isInteger(item.quantity) || item.quantity < 1) {
-          errors.push(`items[${idx}].quantity must be integer >= 1`);
+          itemError.quantity = 'Must be an integer >= 1';
+        }
+        if (Object.keys(itemError).length > 0) {
+          itemErrors.push({ index: idx, errors: itemError });
         }
       });
+      if (itemErrors.length > 0) {
+        validationErrors.items = itemErrors;
+      }
     }
 
-    if (errors.length > 0) {
-      return res.status(400).json({ error: errors.join('; ') });
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json(
+        validationErrorResponse('Order validation failed', validationErrors)
+      );
     }
 
     const client = await pool.connect();
@@ -231,7 +267,10 @@ app.post('/api/orders', async (req, res, next) => {
       for (const item of items) {
         const product = productMap.get(item.productId);
         if (!product) {
-          throw new Error(`Product not found: ${item.productId}`);
+          await client.query('ROLLBACK');
+          return res.status(400).json(
+            validationErrorResponse('Invalid product', { productId: item.productId, message: 'Product not found' })
+          );
         }
         const unitPrice = parseFloat(product.price);
         const lineTotal = unitPrice * item.quantity;
@@ -271,11 +310,13 @@ app.post('/api/orders', async (req, res, next) => {
       await client.query('COMMIT');
 
       res.status(201).json({
-        orderId: order.id,
-        status: order.status,
-        total,
-        items: orderItems,
-        createdAt: order.created_at
+        order: {
+          orderId: order.id,
+          status: order.status,
+          total,
+          items: orderItems,
+          createdAt: order.created_at
+        }
       });
     } catch (error) {
       await client.query('ROLLBACK');
@@ -298,7 +339,7 @@ app.get('/api/orders/:orderId', async (req, res, next) => {
     );
 
     if (orderResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Order not found' });
+      return res.status(404).json(notFoundErrorResponse('Order'));
     }
 
     const order = orderResult.rows[0];
@@ -321,16 +362,18 @@ app.get('/api/orders/:orderId', async (req, res, next) => {
     }));
 
     res.json({
-      orderId: order.id,
-      status: order.status,
-      customerName: order.customer_name,
-      customerPhone: order.customer_phone,
-      deliveryMethod: order.delivery_method,
-      deliveryAddress: order.delivery_address,
-      paymentMethod: order.payment_method,
-      items,
-      total: parseFloat(order.total),
-      createdAt: order.created_at
+      order: {
+        orderId: order.id,
+        status: order.status,
+        customerName: order.customer_name,
+        customerPhone: order.customer_phone,
+        deliveryMethod: order.delivery_method,
+        deliveryAddress: order.delivery_address,
+        paymentMethod: order.payment_method,
+        items,
+        total: parseFloat(order.total),
+        createdAt: order.created_at
+      }
     });
   } catch (error) {
     next(error);
@@ -344,7 +387,11 @@ app.patch('/api/orders/:orderId/status', async (req, res, next) => {
 
     const allowedStatuses = ['placed', 'accepted', 'packed', 'dispatched', 'delivered'];
     if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      return res.status(400).json(
+        validationErrorResponse('Invalid status', {
+          status: `Must be one of: ${allowedStatuses.join(', ')}`
+        })
+      );
     }
 
     const result = await pool.query(
@@ -353,13 +400,15 @@ app.patch('/api/orders/:orderId/status', async (req, res, next) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Order not found' });
+      return res.status(404).json(notFoundErrorResponse('Order'));
     }
 
     res.json({
-      orderId: result.rows[0].id,
-      status: result.rows[0].status,
-      updatedAt: result.rows[0].updated_at
+      order: {
+        orderId: result.rows[0].id,
+        status: result.rows[0].status,
+        updatedAt: result.rows[0].updated_at
+      }
     });
   } catch (error) {
     next(error);
@@ -367,14 +416,15 @@ app.patch('/api/orders/:orderId/status', async (req, res, next) => {
 });
 
 app.use((req, res) => {
-  res.status(404).json({ data: [], total: 0, error: 'Not found' });
+  res.status(404).json(errorResponse('NOT_FOUND', 'Route not found'));
 });
 
 // eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
   // eslint-disable-next-line no-console
-  console.error(error);
-  res.status(500).json({ data: [], total: 0, error: 'Internal server error' });
+  console.error('Server error:', error.message);
+  // Don't expose internal error details in production
+  res.status(500).json(errorResponse('INTERNAL_ERROR', 'Internal server error'));
 });
 
 app.listen(PORT, () => {

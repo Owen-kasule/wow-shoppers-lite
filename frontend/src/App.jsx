@@ -148,7 +148,7 @@ function ProductsPage({ onNavigate, onAddRequest }) {
     apiGet('/api/categories')
       .then((json) => {
         if (cancelled) return;
-        setCategories(json.data || []);
+        setCategories(json.categories || []);
       })
       .catch((e) => {
         if (cancelled) return;
@@ -180,7 +180,7 @@ function ProductsPage({ onNavigate, onAddRequest }) {
       apiGet('/api/products', productParams)
         .then((json) => {
           if (cancelled) return;
-          setProducts(json.data || []);
+          setProducts(json.products || []);
         })
         .catch((e) => {
           if (cancelled) return;
@@ -400,7 +400,7 @@ function CheckoutPage({ onNavigate }) {
       }
 
       clearCart();
-      onNavigate(`order-confirmation/${json.orderId}`);
+      onNavigate(`order-confirmation/${json.order.orderId}`);
     } catch (err) {
       setError(err.message || 'Failed to create order');
     } finally {
@@ -504,7 +504,7 @@ function OrderConfirmationPage({ orderId, onNavigate }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
-        setOrder(data);
+        setOrder(data.order);
       })
       .catch((err) => setError(err.message || 'Failed to load order'))
       .finally(() => setLoading(false));
@@ -554,7 +554,7 @@ function OrderTrackingPage({ orderId, onNavigate }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
-        setOrder(data);
+        setOrder(data.order);
       })
       .catch((err) => setError(err.message || 'Failed to load order'))
       .finally(() => setLoading(false));
@@ -672,8 +672,8 @@ function AdminOrdersPage({ onNavigate }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
-        setOrders(data.data || []);
-        setTotal(data.total || 0);
+        setOrders(data.orders || []);
+        setTotal(data.count || 0);
         setTotalPages(data.totalPages || 1);
       })
       .catch((err) => setError(err.message || 'Failed to load orders'))
